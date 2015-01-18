@@ -167,14 +167,6 @@ int main(int argc, char **argv)
 	data=initializeSharedMemory(key, sharedMemorySize);
 
 
-
-
-	
-
-
-
-
-
 	
 	if (pfio_init() < 0) {
 		exit(-1);
@@ -182,6 +174,9 @@ int main(int argc, char **argv)
 
 	startTime=getCurrentTimestamp();
 
+	
+	int lastAngle0=0;
+	int lastAngle1=0;
 	
 	while(1) {
 		
@@ -191,8 +186,22 @@ int main(int argc, char **argv)
 		upTime1=ceil(upTime180*((double) angles[0]/(double)180));
 		upTime2=ceil(upTime180*((double) angles[1]/(double)180));
 		
-		
-		printf("%d\t%d\t%f\t%f\n", angles[0], angles[1], upTime1, upTime2);
+
+		if((lastAngle0-angles[0])!=0 || (lastAngle1-angles[1])!=0) {
+			lastAngle0=(int) angles[0];
+			lastAngle1=(int) angles[1];
+			
+			
+			printf("%d\t%d\t%d\t%d\t%f\t%f\n",
+				angles[0],
+				angles[1],
+				lastAngle0,
+				lastAngle1,
+				upTime1,
+				upTime2
+			);
+			
+		}
 		
 		
 		now=getCurrentTimestamp();
