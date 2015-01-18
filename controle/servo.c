@@ -17,7 +17,7 @@
 
 #include <libpiface-1.0/pfio.h>
 
-#include "../library/json-parser/json.c"
+#include "../library/c/json-parser/json.c"
 
 
 #define SHM_SIZE 1024  /* make it a 1K shared memory segment */
@@ -33,9 +33,9 @@ long long getCurrentTimestamp() {
 
 
 
-char * getSharedMemoryContent(char * data) {
+char * getSharedMemoryContent(char * data, int sharedMemorySize) {
 
-	char buffer[SHM_SIZE];
+	char buffer[sharedMemorySize];
 
 	int index=0;
 	
@@ -64,7 +64,7 @@ char * getSharedMemoryContent(char * data) {
 
 //extract angles from a string of that form angle1\tangle2\0
 //return an array of two int
-int * extractAnglesFromString(char * string) {
+int * extractAnglesFromString(char * string, int sharedMemorySize) {
 	int angles[2];
 	int index=0;
 	
@@ -75,7 +75,7 @@ int * extractAnglesFromString(char * string) {
 	int tempIndex=0;
 
 	
-	for(index=0; index<SHM_SIZE; index++) {
+	for(index=0; index<sharedMemorySize; index++) {
 		
 		if(string[index]!='\t' && !first) {
 			angle0[tempIndex]=string[index];
@@ -125,10 +125,11 @@ char * initializeSharedMemory(key_t key, int size) {
 }
 
 
-int * getAnglesFromBuffer(char * data) {
+int * getAnglesFromBuffer(char * data, int sharedMemorySize) {
 	int * angles;
 	angles=extractAnglesFromString(
-		getSharedMemoryContent(data)
+		getSharedMemoryContent(data, sharedMemorySize),
+		sharedMemorySize
 	);
 	return angles;
 }
@@ -251,7 +252,7 @@ int main(int argc, char **argv)
 	
 	while(1) {
 		
-		angles=getAnglesFromBuffer(data);
+		angles=getAnglesFromBuffer(data, sharedMemorySize);
 		
 		
 		upTime1=ceil(upTime180*((double) angles[0]/(double)180));
@@ -305,44 +306,6 @@ int main(int argc, char **argv)
 			lastCycleTime=0;
 		}
 	}
-	
-	
-	
-	/*
-	
-	unsigned char buffer[BUFFERSIZE];
-	FILE                         *instream;
-
-	int c;
-	int bufferSize;
-	int angleX;
-	int angleY;
-	
-
-	bufferSize=0;
-	instream=fopen("/dev/stdin","r");
-	
-	while ((c = fgetc (instream)) != EOF) {
-		
-		if(c=='\t') {
-			buffer[bufferSize]='\0';
-			angleX=atoi(buffer);
-			bufferSize=0;
-		}
-		else if(c=='\n') {
-			buffer[bufferSize]='\0';
-			angleY=atoi(buffer);
-			bufferSize=0;
-		}
-		else {
-			buffer[bufferSize]=c;
-			bufferSize++;
-		}
-	}
-	fclose (instream);
-	*/
-
-
 
     pfio_deinit();
     return 0;

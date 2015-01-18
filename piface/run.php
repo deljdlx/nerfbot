@@ -225,7 +225,6 @@ class Raspberry
 
 		$frequency=1000000/$this->frequency;
 
-		$shared_memory_string='hello world';
 
 		$buffer=rand(0, 180)."\t".rand(0, 180)."\n";
 		echo $buffer;
