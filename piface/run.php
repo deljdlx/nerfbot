@@ -124,6 +124,7 @@ class Raspberry
 	
 	protected $sharedMemoryKey;
 	protected $sharedMemorySize;
+	protected $semaphoreKey;
 	
 	
 	
@@ -140,6 +141,9 @@ class Raspberry
 		}
 		if(isset($configuration->sharedMemorySize)) {
 			$this->sharedMemorySize=$configuration->sharedMemorySize;
+		}
+		if(isset($configuration->semaphoreKey)) {
+			$this->semaphoreKey=$configuration->semaphoreKey;
 		}
 		
 		
@@ -231,7 +235,7 @@ class Raspberry
 		echo $buffer;
 		
 		//echo "sem get\n";
-		$this->memoryLock=sem_get(16641664, 1, 066, 1);
+		$this->memoryLock=sem_get($this->semaphoreKey, 1, 066, 1);
 		
 		//echo "sem acquire\n";
 		$sem=sem_acquire($this->memoryLock);

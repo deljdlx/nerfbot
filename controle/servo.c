@@ -142,6 +142,10 @@ int main(int argc, char **argv)
 	
 
 	char *data;
+	
+	
+	int semaphore;
+	int semaphoreKey;
 
 
 	
@@ -188,7 +192,10 @@ int main(int argc, char **argv)
 			idleTime=configuration->u.object.values[configurationIndex].value->u.integer;
 			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, idleTime);
 		}
-		
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "semaphoreKey")==0) {
+			semaphoreKey=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, semaphoreKey);
+		}
 	}
 
 	
@@ -214,11 +221,11 @@ int main(int argc, char **argv)
 		
 	union semun argument;
 	
-	int semaphore;
+	
 	int semaphoreValue;
 	
 	
-	semaphore=semget(16641664, 1, IPC_CREAT | 0666);
+	semaphore=semget(semaphoreKey, 1, IPC_CREAT | 0666);
 	
 
 	angles=getAnglesFromBuffer(data, sharedMemorySize);
