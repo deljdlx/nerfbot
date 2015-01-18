@@ -1,0 +1,3 @@
+import piface.pfio
+init()
+
