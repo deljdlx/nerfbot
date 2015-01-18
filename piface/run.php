@@ -143,15 +143,15 @@ class Raspberry
 		}
 		
 		
-	
+		/*
 		$this->driver=PiFaceDigital::create();
 		$this->driver->init();
-
 		$switches=$this->driver->getSwitches();
 		
 		foreach($switches as $key=>$switch) {
 			$this->switches[]=new GC_Switch($this, $switch);
 		}
+		*/
 	}
 	
 
@@ -219,16 +219,32 @@ class Raspberry
 	
 	
 	public function run() {
-	
-
-		$shared_memory_id = shmop_open($this->sharedMemoryKey, "c", 0666, $this->sharedMemorySize);
 
 		$frequency=1000000/$this->frequency;
 
 
 		$buffer=rand(0, 180)."\t".rand(0, 180)."\n";
+		
+		$buffer="0\t0\n";
+		//$buffer="180\t180\n";
+		
 		echo $buffer;
+		
+		//echo "sem get\n";
+		$this->memoryLock=sem_get(16641664, 1, 066, 1);
+		
+		//echo "sem acquire\n";
+		$sem=sem_acquire($this->memoryLock);
+		
+		//echo "memory allocation\n";
+		$shared_memory_id = shmop_open($this->sharedMemoryKey, "c", 0666, $this->sharedMemorySize);
+		//echo "memory write\n";
 		$result=shmop_write($shared_memory_id, $buffer, 8);			//Shared memory id, string to write, Index to start writing from
+
+
+		//echo "sem release\n";
+		sem_release($this->memoryLock);
+	
 		
 		return;
 
@@ -260,17 +276,16 @@ class Raspberry
 	}
 }
 
+
 $bot=new GC_Bot();
 
-
+/*
 $bot->getComputer()->getSwitch(0)->onClick(function() {
-	
-	//print_r($this->computer->devices);
-
 	$this->getDevice(0)->setCycle(
 		($this->getDevice(0)->getCycle()+1)%8+1
 	);
 });
+*/
 
 $bot->run();
 exit();

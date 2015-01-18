@@ -1,4 +1,7 @@
 cd controle
+
+rm servo
+
 make
 cd ..
 

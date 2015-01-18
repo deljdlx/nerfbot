@@ -1,6 +1,7 @@
 
 #include <sys/shm.h>		//Used for shared memory
 
+ 
 
 
 char * initializeSharedMemory(key_t key, int size) {
@@ -25,15 +26,13 @@ char * initializeSharedMemory(key_t key, int size) {
 char * getSharedMemoryContent(char * data, int sharedMemorySize) {
 
 	char buffer[sharedMemorySize];
-
 	int index=0;
-	
 	int i=0;
 	int start=0;
+
+	
 	
 	for(i=0; i<sharedMemorySize; i++) {
-		
-		
 		if(data[i]=='\0' || data[i]=='\n') {
 			if(start) {
 				buffer[index]='\0';

@@ -22,6 +22,18 @@
 #include "../library/c/json-parser/json.c"
 
 
+#include <sys/ipc.h> 
+#include <sys/sem.h>
+
+
+union semun {
+	int val;
+	struct semid_ds* buf;
+	unsigned short * array;
+	struct seminfo* __buf;
+} arg;
+
+
 
 long long getCurrentTimestamp() {
     struct timeval te; 
@@ -98,9 +110,10 @@ int main(int argc, char **argv)
 
 	
 
-
+	long idleTime=200;
 	
 	long upTime180=2000;
+	long upTime0=1000;
 	long period=19000;
 	
 	
@@ -115,6 +128,11 @@ int main(int argc, char **argv)
 	long long startTime;
 	long long now;
 	long long duration;
+	
+	
+	long long checkStart;
+	long long checkPeriod;
+	long long checkDuration;
 	
 	
 
@@ -158,6 +176,19 @@ int main(int argc, char **argv)
 			upTime180=configuration->u.object.values[configurationIndex].value->u.integer;
 			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, upTime180);
 		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "checkPeriod")==0) {
+			checkPeriod=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, checkPeriod);
+		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "upTime0")==0) {
+			upTime0=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, upTime0);
+		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "idleTime")==0) {
+			idleTime=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, idleTime);
+		}
+		
 	}
 
 	
@@ -173,25 +204,65 @@ int main(int argc, char **argv)
 	}
 
 	startTime=getCurrentTimestamp();
+	
+	checkStart=getCurrentTimestamp();
 
 	
 	int lastAngle0=0;
 	int lastAngle1=0;
+
+		
+	union semun argument;
 	
+	int semaphore;
+	int semaphoreValue;
+	
+	
+	semaphore=semget(16641664, 1, IPC_CREAT | 0666);
+	
+
+	angles=getAnglesFromBuffer(data, sharedMemorySize);
+	
+
+
+
+
+	int currentAngle0=angles[0];
+	int currentAngle1=angles[1];
+
 	while(1) {
+
 		
-		angles=getAnglesFromBuffer(data, sharedMemorySize);
 		
+		now=getCurrentTimestamp();
+		duration=now-startTime;
+		checkDuration=now-checkStart;
 		
-		upTime1=ceil(upTime180*((double) angles[0]/(double)180));
-		upTime2=ceil(upTime180*((double) angles[1]/(double)180));
+		angles[0]=currentAngle0;
+		angles[1]=currentAngle1;
+		
+		if(checkDuration>checkPeriod) {
+			semaphoreValue=semctl(semaphore, 0, GETVAL, argument);
+			if(semaphoreValue==1) {
+				angles=getAnglesFromBuffer(data, sharedMemorySize);
+				checkStart=now;
+			}
+		}
 		
 
+		currentAngle0=angles[0];
+		currentAngle1=angles[1];
+		
+		
+		upTime1=upTime0+ceil(upTime180*((double) angles[0]/(double)180));
+		upTime2=upTime0+ceil(upTime180*((double) angles[1]/(double)180));
+		
+		
+		
+		/*
 		if((lastAngle0-angles[0])!=0 || (lastAngle1-angles[1])!=0) {
 			lastAngle0=(int) angles[0];
 			lastAngle1=(int) angles[1];
-			
-			
 			printf("%d\t%d\t%d\t%d\t%f\t%f\n",
 				angles[0],
 				angles[1],
@@ -200,14 +271,13 @@ int main(int argc, char **argv)
 				upTime1,
 				upTime2
 			);
-			
 		}
+		*/
 		
+
+
 		
-		now=getCurrentTimestamp();
-		duration=now-startTime;
-		
-		
+
 		
 		
 		
@@ -247,6 +317,8 @@ int main(int argc, char **argv)
 			startTime=now;
 			lastCycleTime=0;
 		}
+		
+		usleep(idleTime);
 	}
 
     pfio_deinit();
