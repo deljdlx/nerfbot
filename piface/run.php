@@ -115,14 +115,35 @@ class GC_Switch
 class Raspberry
 {
 
+	protected $configurationFile='configuration.json';
+
 	protected $devices=array();
 	protected $drivers;
 	protected $frequency=1;
+	
+	
+	protected $sharedMemoryKey;
+	protected $sharedMemorySize;
+	
+	
 	
 	protected $switches=array();
 	//protected $switchesValues=array();
 
 	public function __construct() {
+	
+	
+		$configuration=json_decode(file_get_contents(__DIR__.'/../configuration/'.$this->configurationFile));
+		
+		if(isset($configuration->sharedMemoryKey)) {
+			$this->sharedMemoryKey=$configuration->sharedMemoryKey;
+		}
+		if(isset($configuration->sharedMemorySize)) {
+			$this->sharedMemorySize=$configuration->sharedMemorySize;
+		}
+		
+		
+	
 		$this->driver=PiFaceDigital::create();
 		$this->driver->init();
 
@@ -199,52 +220,16 @@ class Raspberry
 	
 	public function run() {
 	
-		$key=672213396;
-		
-		
-		//$key = ftok("/tmp/shared", 'R');
-	
-		$shared_memory_id = shmop_open($key, "c", 0666, 1024);
-	
-	
-	
-		//echo shmop_read($shared_memory_id, 0, 1024);
-		//die();
-	
+
+		$shared_memory_id = shmop_open($this->sharedMemoryKey, "c", 0666, $this->sharedMemorySize);
+
 		$frequency=1000000/$this->frequency;
-		
-		//echo $frequency;
-		
-		
-		
+
 		$shared_memory_string='hello world';
 
-
-
-		//CONVERT TO AN ARRAY OF BYTE VALUES
-		$shared_memory_array = array_slice(unpack('C*', "\0".$shared_memory_string), 1);
-
-		//echo "Shared memory bytes: ";
-		for($i = 0; $i < 10; $i++)
-		{
-			//echo $shared_memory_array[$i] . ", ";
-		}
-		//echo "<br />";
-
-
-
-					//The array to write
-			$shared_memory_array = array(30, 255);
-			
-			//Convert the array of byte values to a byte string
-			$shared_memory_string = call_user_func_array('pack', array_merge(array("C*"), $shared_memory_array));
-			
-			//echo "Writing bytes: $shared_memory_string\n";
-			
-			
-			$buffer=rand(0, 180)."\t".rand(0, 180)."\n";
-			echo $buffer;
-			$result=shmop_write($shared_memory_id, $buffer, 8);			//Shared memory id, string to write, Index to start writing from
+		$buffer=rand(0, 180)."\t".rand(0, 180)."\n";
+		echo $buffer;
+		$result=shmop_write($shared_memory_id, $buffer, 8);			//Shared memory id, string to write, Index to start writing from
 		
 		return;
 
@@ -290,67 +275,3 @@ $bot->getComputer()->getSwitch(0)->onClick(function() {
 
 $bot->run();
 exit();
-
-
-
-
-
-
-
-exit();
-
-while(1) {
-for($i=0; $i<7; $i++) {
-	//echo $dev->getInputPins()[3]->getValue()." ";
-
-	$dev->getOutputPins()[$i]->setValue(1);
-	
-	//exit();
-
-	for($j=0;$j<7; $j++) {
-		echo $dev->getOutputPins()[$j]->getValue();
-	}
-	
-	echo "\t";
-	
-	for($j=0;$j<4; $j++) {
-		echo $dev->getSwitches()[$j]->getValue();
-	}
-
-	
-	echo "\n";
-
-
-	//$dev->getLeds()[$i]->turnOn();
-	//$dev->getOutputPins()[$i]->setValue(1);
-
-	//usleep(1000);
-
-	sleep(1);
-
-
-	//usleep(10000);
-	//$dev->getLeds()[$i]->turnOff();
-
-	$dev->getOutputPins()[$i]->setValue(0);
-}
-}
-
-
-// $dev->getInputPins();
-// $dev->getOutputPins();
-// $dev->getLeds();
-// $dev->getRelays();
-// $dev->getSwitches();
-
-
-// Turn on relay 0
-//$dev->getRelays()[0]->turnOn();
-
-// Get 0/1 of input pin 3 (There are 8 pins, 0-7)
-//$dev->getInputPins()[3]->getValue();
-
-// Toggle a value on a output pin (5 in this example)
-//$dev->getOutputPins()[5]->toggle(); // 0
-//$dev->getOutputPins()[5]->toggle(); // 1
-//$dev->getOutputPins()[5]->toggle(); // 0

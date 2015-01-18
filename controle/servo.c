@@ -11,17 +11,19 @@
 #include <time.h>
 
 #include <unistd.h>
-#include <libpiface-1.0/pfio.h>
-
 
 #include <sys/shm.h>		//Used for shared memory
 
- 
-#define BUFFERSIZE    255
+
+#include <libpiface-1.0/pfio.h>
+
+#include "../library/json-parser/json.c"
+
+
 #define SHM_SIZE 1024  /* make it a 1K shared memory segment */
 
 
-long long current_timestamp() {
+long long getCurrentTimestamp() {
     struct timeval te; 
     gettimeofday(&te, NULL); // get current time
 	long long microseconds = te.tv_sec*1000000LL + te.tv_usec; // caculate milliseconds
@@ -58,7 +60,11 @@ char * getSharedMemoryContent(char * data) {
 	return buffer;
 }
 
-int * extractAngles(char * string) {
+
+
+//extract angles from a string of that form angle1\tangle2\0
+//return an array of two int
+int * extractAnglesFromString(char * string) {
 	int angles[2];
 	int index=0;
 	
@@ -67,9 +73,7 @@ int * extractAngles(char * string) {
 	
 	int first=0;
 	int tempIndex=0;
-	
-	
-	//printf("%s\n", string);
+
 	
 	for(index=0; index<SHM_SIZE; index++) {
 		
@@ -92,55 +96,18 @@ int * extractAngles(char * string) {
 		}
 		tempIndex++;
 	} 
+	return angles;
 }
 
 
 
-int main(int argc, char **argv)
-{
-	
-	unsigned char buffer[BUFFERSIZE];
-	FILE                         *instream;
 
-	int c;
-	int bufferSize;
-	
-	int angleX;
-	int angleY;
-	
-	
-	long long startTime;
-	long long now;
-	
-	
-	long long duration;
-
-	
-	double upTime180=2000;
-	
-	double upTime1=2000;
-	double upTime2=2000;
-	
-	
-	long long period=18000;
-	
-	long long lastCycleTime=0;
-
-	int lastState=0;
-	int lastState2=0;
-	
-
-
-
-	char * sharedMemory;
-	char *data;
-
-	key_t key=672213396;
-
+char * initializeSharedMemory(key_t key, int size) {
 	int shmid;
+	char * data;
 
 	
-	if ((shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT)) == -1) {
+	if ((shmid = shmget(key, size, 0666 | IPC_CREAT)) == -1) {
 		perror("shmget");
 		exit(1);
 	}
@@ -153,30 +120,139 @@ int main(int argc, char **argv)
 		perror("shmat");
 		exit(1);
 	}
+	
+	return data;
+}
+
+
+int * getAnglesFromBuffer(char * data) {
+	int * angles;
+	angles=extractAnglesFromString(
+		getSharedMemoryContent(data)
+	);
+	return angles;
+}
+
+
+
+char * getFileContent(char * fileName) {
+	char * buffer = 0;
+	long length;
+	FILE * f = fopen (fileName, "rb");
+
+	if (f)
+	{
+	  fseek (f, 0, SEEK_END);
+	  length = ftell (f);
+	  fseek (f, 0, SEEK_SET);
+	  buffer = malloc (length);
+	  if (buffer)
+	  {
+		fread (buffer, 1, length, f);
+	  }
+	  fclose (f);
+	}
+	
+	return buffer;
+}
+
+
+
+
+int main(int argc, char **argv)
+{
+
+	
+
+
+	
+	long upTime180=2000;
+	long period=19000;
+	
+	
+	double upTime1=2000;
+	double upTime2=2000;
+	
+
+	long  key=672213396;
+	int sharedMemorySize=1024;
+	
+	long long lastCycleTime=0;
+	long long startTime;
+	long long now;
+	long long duration;
+	
+	
+
+	int lastState=0;
+	int lastState2=0;
+	int * angles;
+	
+
+	char *data;
+
+
+	
+	
+	char * configurationBuffer;
+	
+	
+	json_value * configuration;
+	
+	
+	configurationBuffer=getFileContent("configuration/configuration.json");
+	configuration=json_parse(configurationBuffer, 2048);
+	
+	
+	int configurationIndex=0;
+	
+
+	for(configurationIndex=0; configurationIndex<configuration->u.object.length; configurationIndex++) {
+		if(strcmp(configuration->u.object.values[configurationIndex].name, "sharedMemoryKey")==0) {
+			key=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, key);
+		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "sharedMemorySize")==0) {
+			sharedMemorySize=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, sharedMemorySize);
+		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "period")==0) {
+			period=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, period);
+		}
+		else if(strcmp(configuration->u.object.values[configurationIndex].name, "upTime180")==0) {
+			upTime180=configuration->u.object.values[configurationIndex].value->u.integer;
+			printf("%s %d\n", configuration->u.object.values[configurationIndex].name, upTime180);
+		}
+	}
+
+	
+	
+
+	
+	data=initializeSharedMemory(key, sharedMemorySize);
+
+
+
+
+	
+
+
+
 
 
 	
 	if (pfio_init() < 0) {
 		exit(-1);
 	}
-	
-	
-	
-	
-	
 
-	bufferSize=0;
-	instream=fopen("/dev/stdin","r");
-	startTime=current_timestamp();
-	
-	
-	int * angles;
+	startTime=getCurrentTimestamp();
+
 	
 	while(1) {
-
-		sharedMemory=getSharedMemoryContent(data);
 		
-		angles=extractAngles(sharedMemory);
+		angles=getAnglesFromBuffer(data);
+		
 		
 		upTime1=ceil(upTime180*((double) angles[0]/(double)180));
 		upTime2=ceil(upTime180*((double) angles[1]/(double)180));
@@ -185,7 +261,7 @@ int main(int argc, char **argv)
 		printf("%d\t%d\t%f\t%f\n", angles[0], angles[1], upTime1, upTime2);
 		
 		
-		now=current_timestamp();
+		now=getCurrentTimestamp();
 		duration=now-startTime;
 		
 		
@@ -232,6 +308,19 @@ int main(int argc, char **argv)
 	
 	
 	
+	/*
+	
+	unsigned char buffer[BUFFERSIZE];
+	FILE                         *instream;
+
+	int c;
+	int bufferSize;
+	int angleX;
+	int angleY;
+	
+
+	bufferSize=0;
+	instream=fopen("/dev/stdin","r");
 	
 	while ((c = fgetc (instream)) != EOF) {
 		
@@ -250,10 +339,8 @@ int main(int argc, char **argv)
 			bufferSize++;
 		}
 	}
-	
-	
-	
 	fclose (instream);
+	*/
 
 
 
